@@ -29,6 +29,7 @@ class _BigWheelScreenState extends State<BigWheelScreen>
   late Animation<double> _arrowAnimation;
   bool _isSpinning = false;
   double _currentAngle = 0;
+  String _selectedBet = '';
 
   final Map<int, String> numberToGrade = {
     for (int i = 1; i <= 24; i++) i: 'SILVER',
@@ -41,7 +42,7 @@ class _BigWheelScreenState extends State<BigWheelScreen>
     54: 'MEGA',
   };
 
-  int _currentNumber = 1;
+  int _currentNumber = 0;
   String _currentGrade = '';
 
   @override
@@ -67,7 +68,7 @@ class _BigWheelScreenState extends State<BigWheelScreen>
   }
 
   void _startSpin() {
-    if (_isSpinning) return;
+    if (_isSpinning || _selectedBet.isEmpty) return;
 
     _arrowController.repeat(reverse: true);
     final int randomTurns = Random().nextInt(3) + 3;
@@ -100,66 +101,124 @@ class _BigWheelScreenState extends State<BigWheelScreen>
     });
   }
 
+  void _placeBet(String grade) {
+    setState(() {
+      _selectedBet = grade;
+    });
+  }
+
+  void _resetGame() {
+    setState(() {
+      _selectedBet = '';
+      _currentNumber = 0;
+      _currentGrade = '';
+      _currentAngle = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Big Wheel Game')),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          AnimatedBuilder(
-            animation: _arrowAnimation,
-            builder: (context, child) {
-              return Transform.rotate(
-                angle: _arrowAnimation.value,
-                child: Icon(Icons.arrow_drop_down, size: 70, color: Colors.red),
-              );
-            },
-          ),
-          Center(
-            child: Stack(
-              alignment: Alignment.center,
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedBuilder(
-                  animation: _wheelAnimation,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _wheelAnimation.value * pi / 180,
-                      child: Image.asset('assets/big_wheel.png', width: 400),
-                    );
-                  },
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _wheelAnimation,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: _wheelAnimation.value * pi / 180,
+                          child: Image.asset(
+                            'assets/big_wheel.png',
+                            width: 400,
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      top: -40,
+                      child: AnimatedBuilder(
+                        animation: _arrowAnimation,
+                        builder: (context, child) {
+                          return Transform.rotate(
+                            angle: _arrowAnimation.value,
+                            child: Icon(
+                              Icons.arrow_drop_down,
+                              size: 70,
+                              color: Colors.red,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _selectedBet.isNotEmpty ? _startSpin : null,
+                  child: Text(_isSpinning ? 'Spinning...' : 'Spin'),
+                ),
+                SizedBox(height: 20),
+                // Text(
+                //   'Number: $_currentNumber',
+                //   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                // ),
+                Text(
+                  'Grade: $_currentGrade',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                if (_selectedBet.isNotEmpty && _currentNumber != 0)
+                  Text(
+                    _selectedBet == _currentGrade
+                        ? 'Bet Successful! ✅'
+                        : 'Bet Failed ❌',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
               ],
             ),
           ),
-
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _startSpin,
-            child: Text(_isSpinning ? 'Spinning...' : 'Spin'),
-          ),
-          SizedBox(height: 20),
-          Text(
-            'Number: $_currentNumber',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            'Grade: $_currentGrade',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ...numberToGrade.values.toSet().map((grade) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: ElevatedButton(
+                      onPressed: () => _placeBet(grade),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _selectedBet == grade ? Colors.green : null,
+                      ),
+                      child: Text('Bet on $grade'),
+                    ),
+                  );
+                }).toList(),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _resetGame,
+                  child: Text('New Game', style: TextStyle(fontSize: 20)),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _wheelController.dispose();
-    _arrowController.dispose();
-    super.dispose();
   }
 }
